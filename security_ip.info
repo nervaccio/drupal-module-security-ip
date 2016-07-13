@@ -1,0 +1,8 @@
+name = Security IP
+description = Security module that import IPs ban list from different sources.
+
+package = Security
+
+core = 7.x
+
+configure = admin/config/security

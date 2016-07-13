@@ -1,0 +1,45 @@
+<?php
+
+/**
+ * @file
+ * Schema file for security_ip table.
+ */
+
+/**
+ * Implements hook_schema().
+ */
+function security_ip_schema() {
+  $schema = array();
+
+  $schema['security_ip'] = array(
+    'description' => 'The base table for banning reasons',
+    'fields' => array(
+      'sid' => array(
+        'description' => 'The primary identifier for banning\'s reason content.',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'iid' => array(
+        'description' => 'Primary Key: unique ID for IP addresses.',
+        'type' => 'int',
+      ),
+      'reason' => array(
+        'description' => 'Reason for banning and/or source.',
+        'type' => 'text',
+      ),
+      'timestamp' => array(
+        'description' => 'Timestamp',
+        'type' => 'int',
+      ),
+    ),
+    'unique keys' => array(
+      'sid' => array(
+        'sid',
+      ),
+    ),
+    'primary key' => array('sid'),
+  );
+
+  return $schema;
+}

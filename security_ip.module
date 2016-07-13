@@ -1,0 +1,117 @@
+<?php
+
+/**
+ * @file
+ * The module file that controls admin page and import ips list.
+ */
+
+/**
+ * Implements hook_menu().
+ */
+function security_ip_menu() {
+  $items = array();
+
+  $items['admin/config/security'] = array(
+    'page callback' => 'security_ip_admin_page',
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+  );
+
+  return $items;
+}
+
+/**
+ * Admin page callback.
+ */
+function security_ip_admin_page() {
+  drupal_set_title(t('Security IP - Administration page'));
+
+  $form = drupal_get_form('security_ip_admin_form');
+
+  return $form;
+}
+
+/**
+ * Function to add new banned ip.
+ */
+function banNewIps($list){
+  $i = 0;
+  foreach ($list as $ip) {
+    // Check if entry already exists.
+    $check = db_query("SELECT ip FROM blocked_ips WHERE ip = :ip", array(':ip' => $ip->ip));
+    if ($check->rowCount() == 0) {
+      // Insert entry.
+      $q = db_insert('blocked_ips')
+        ->fields(array(
+          'ip' => $ip->ip,
+          )
+        )
+        ->execute();
+
+      // Update security_ip table with references.
+      if ($q > 0) {
+        $si = db_insert('security_ip')
+          ->fields(array(
+            'iid' => $q,
+            'reason' => $ip->reason,
+            )
+          )
+          ->execute();
+      }
+      $i++;
+    }
+  }
+  return $i;
+}
+
+
+/**
+ * Form for admin section.
+ */
+function security_ip_admin_form($form, &$form_state) {
+
+  $form['url_source'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Url della sorgente'),
+    '#description' => t('Url da cui recuperare la lista di IPs da bannare. Es.: http://security.weevo.it'),
+    '#default_value' => variable_get('security_ip_url', 'http://localhost:8181/banlist.php'),
+  );
+
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Update ban list'),
+  );
+  return $form;
+}
+
+/**
+ * Security ip admin form validation.
+ */
+function security_ip_admin_form_validate($form, &$form_state) {
+  // Validation logic.
+  $checkUrl = filter_var($form['url_source']['#value'], FILTER_VALIDATE_URL, FILTER_FLAG_SCHEME_REQUIRED);
+
+  if ($checkUrl) {
+    variable_set('security_ip_url', $checkUrl);
+
+    $response = drupal_http_request('http://localhost:8181/banlist.php');
+    $results = banNewIps(json_decode($response->data));
+
+    if ($results) {
+      drupal_set_message(t('Aggiunti :X IPs', array(':X' => $results)), 'status');
+    }
+    else {
+      drupal_set_message(t('Nessun nuovo IP aggiunto alla blacklist.'), 'status');
+    }
+  }
+  else {
+    form_set_error('url_source', 'Url non corretto. es: http://security.weevo.it/banlist.php');
+  }
+}
+
+/**
+ * Security_ip_admin form Submission logic.
+ */
+function security_ip_admin_form_submit($form, &$form_state) {
+  drupal_set_message(t('Importazione completata.'));
+}
